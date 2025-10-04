@@ -5,22 +5,24 @@ interface
         procedure InitKernel;
         procedure KernelLoad;
         
-        type TBootLoad = record { специальный тип для массива с ядрами, в массив записываются имя ядра, путь, и является ли оно стандартным для загрузки }
+        type TKernel = record { специальный тип для массива с ядрами, в массив записываются имя ядра, путь, и является ли оно стандартным для загрузки }
                 name:string;
                 path:string;
                 isdefault:boolean;
              end;
         
-        var Kernels: array[1..2] of TBootLoad;
+        const MAX_KERNELS = 2;
+        
+        var Kernels: array[1..MAX_KERNELS] of TKernel;
         
 implementation
 
-uses crt, sysutils, process, rebootflag;
+uses crt, sysutils, process;
 
 var		loaderfile:text;
 		loaderpath:string;
 		n:integer;
-		kernelexist, dkp, kp:string;
+		kernelexist, DefaultKernelsPath, KernelsPath:string;
 		
 		
 function DefaultKernel: string;
@@ -34,7 +36,7 @@ begin
 end;		
 		
 procedure LoaderConfigure;
-var g, h:tsearchrec; i:integer; defaultload:string; ch: char; recovery: boolean = false;
+var g, h:tsearchrec; i:integer; defaultload:string;
 begin
     filecreate('./root/boot/neoinit/loader.conf');
 
@@ -45,8 +47,10 @@ begin
         if defaultload = '' then
         begin
             if findfirst('./root/boot/*.bin', FaReadOnly, h) = 0 then
+            begin
                 defaultload := h.name;
-            findclose(h)
+                findclose(h);
+            end
             else
             begin
                 writeln('No kernels found');
@@ -74,7 +78,7 @@ begin
     repeat
         inc(i); { к счетчику прибавляется 1 единица }
         
-        if i > Length(Kernels) then 
+        if i > MAX_KERNELS then 
             begin
                 writeln('Warning: Maximum kernel count reached. Some kernels will be ignored.'); { если ядер больше чем то кол-во которое поддерживает загрузчик, то выводится это сообщение }
                 sleep(500);
@@ -135,7 +139,7 @@ begin
   else writeln('Kernel not found');
 end;
 
-procedure ShowMenu;
+procedure ShowMenu; { процедура вывода меню загрузчика }
 var a:integer;
 begin
     writeln('====NeoInit====');
@@ -145,8 +149,10 @@ begin
 end;
 
 procedure KernelLoad; { сама процедура загрузки интерфейса загрузчика }
-var w, c:integer;
+var w, t, status:integer;
 begin
+  status := 1;
+  
   loaderpath := './root/boot/neoinit/loader.conf';
   
     if fileexists(loaderpath)=false then { проверка существования конфига }
@@ -154,14 +160,10 @@ begin
             
   InitKernel;
   
-  SetFlag('true');
-  
-  while GetFlag do
+  while (status <> 0) do
   begin
   
   repeat
-    if GetFlag = false then
-        halt;
     
     clrscr;
     
@@ -169,7 +171,7 @@ begin
     
     write('Choose the kernel(or wait 10 seconds): ');
     
-    for c := 1 to 10 do
+    for t := 1 to 10 do
     begin
         
         if KeyPressed then
@@ -184,8 +186,8 @@ begin
                 end;
      
             case w of
-            1:ExecuteProcess(Kernels[1].path, []);
-            2:ExecuteProcess(Kernels[2].path, []);
+            1: Status := ExecuteProcess(Kernels[1].path, []);
+            2: Status := ExecuteProcess(Kernels[2].path, []);
             end;
             break;
         end
@@ -193,12 +195,12 @@ begin
     
     end;
     
-    kp := copy(DefaultKernel, 1, pos('[default-boot]', Defaultkernel) - 1);
+    KernelsPath := copy(DefaultKernel, 1, pos('[default-boot]', Defaultkernel) - 1);
     
-    dkp := './root/boot/' + kp;
+    DefaultKernelsPath := './root/boot/' + KernelsPath;
     
-    if c = 10 then
-        Executeprocess(dkp, []);
+    if t = 10 then
+        Executeprocess(DefaultKernelsPath, []);
     
     until (w = 1) or (w = 2);
   end;

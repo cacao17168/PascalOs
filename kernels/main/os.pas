@@ -1,13 +1,13 @@
 program OfficialKernel;
 
-uses crt, sysutils, repository, fs, usersystem, rebootflag;
+uses crt, sysutils, repository, fs, usersystem;
 
 var  com, args: string;
-     power, video, audio: boolean;
      //Глобальные переменные
      currentDir: string;
 
 procedure OsLoader; { Процедура "загрузки" системы }
+var video, audio: boolean;
 begin
   TextColor(white);
 
@@ -54,6 +54,8 @@ end;
 procedure Login; { Процедура авторизации }
 var logname, passwd, hashedpasswd: string; i, j: integer; correct: boolean;
 begin
+  clrscr;
+
   correct := false;
   
   j := 0;
@@ -118,12 +120,7 @@ begin
   writeln('writefile <filename> - helps you to write smth to <filename>');
 end;
 
-procedure C3; { Процедура команды "hello"(небольшая пасхалка от разработчика) }
-begin
-  writeln('Hello!');
-end;
-
-procedure C5; { Процедура команды "clear" }
+procedure Clear; { Процедура команды "clear" }
 begin
   clrscr;
 end;
@@ -131,15 +128,14 @@ end;
 procedure OsPowerOff; { Процедура команды "poweroff" }
 begin
     writeln('Shutting down...');
-    SetFlag('false');
     sleep(400);
-    power := false;
+    Halt(0);
 end;
 
 procedure ReBoot;
 begin
-    SetFlag('true');
-    power := false;
+    sleep(300);
+    Halt(1);
 end;
 
 procedure UnknownCommand; { Процедура неизвестной команды }
@@ -147,7 +143,7 @@ begin
   writeln('Unknown command. Type "help" for more info');
 end;
 
-procedure Ls(args: string); { универсальная версия команды "list" }
+procedure Ls(args: string); { команда "list" }
 var dir: string; listcd: string; ls1: TSearchRec;
 begin
     if args = '' then
@@ -227,12 +223,9 @@ begin
    case com of { ищет совпадения введенной команды среди заданных констант }
     'help':MainCommand;
     'ls':Ls(args);
-    'hello':C3;
     'poweroff':OsPowerOff;
     'reboot':ReBoot;
-    'clear':C5;
-    
-    { Команды cd }
+    'clear':Clear;
     'cd':CD(args);
 
     
@@ -246,12 +239,15 @@ begin
 	            Calculator;
 	         end;
     
-    'cfile':FileCreate(args); { создание и удаление файлов }
+    { работа с файлами }
+    'cfile':FileCreate(args);
     'rmfile':FileDelete(args);
     'readfile':ReadFile(args);
     'writefile':WriteToFile(args);
     
-    'ipm':repoApi(args); { пакетный менеджер а также установка програм из репозитория }
+    { программный менеджер(spm = simple program manager) }
+    'spm':repoApi(args);
+    
     'useradd':Createuser(args);
     'userdel':DeleteUser(args);
     
@@ -264,25 +260,23 @@ begin { Основной код для работы системы }
   
    InitRepo; { инициализация репозитория }
   
-   OsLoader;
-        
-   power := true;
+   OsLoader; { вывод экрана загрузки }
    
-   Usersinit;
+   Usersinit; { инициализация пользователей }
   
-   Login;
+   Login; { процедура входа в аккаунт }
    
-   while power = true do
+   while true do
    begin
    
     ConsoleWrite; { выводит приглашение командной строки }
-    readln(com); { чтение команды }
+    readln(com);
     
     com := lowercase(com); { переводит команду в нижний регистр }
     
-    ParseCommand(com, args);
+    ParseCommand(com, args); { парсирование команды }
     
-    Caseofcommands(com, args);
+    Caseofcommands(com, args); { обработка команд(позже будет заменен на шелл который уже в разраотке) }
    end;
 end;
 

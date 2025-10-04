@@ -1,8 +1,6 @@
 program RecoveryKernel;
 
-uses crt, sysutils, rebootflag, bootloader;
-
-var power: boolean;
+uses crt, sysutils;
 
 procedure ScreenUpdate(s:string); { процедура заменяет текущую строку на строку "s" }
 begin
@@ -77,7 +75,7 @@ begin
 end;
 
 procedure LoaderConfigure;
-var g, h:tsearchrec; i:integer; defaultload, loaderpath, kernelexist:string; loaderfile: text; ch: char; recovery: boolean = false;
+var g, h:tsearchrec; i:integer; defaultload, loaderpath, kernelexist:string; loaderfile: text;
 begin
     filecreate('./root/boot/neoinit/loader.conf');
 
@@ -120,7 +118,7 @@ begin
     repeat
         inc(i); { к счетчику прибавляется 1 единица }
         
-        if i > Length(Kernels) then 
+        if i > 2 then 
             begin
                 writeln('Warning: Maximum kernel count reached. Some kernels will be ignored.'); { если ядер больше чем то кол-во которое поддерживает загрузчик, то выводится это сообщение }
                 sleep(500);
@@ -164,14 +162,12 @@ end;
 
 procedure RecoveryPowerOff;
 begin
-    SetFlag('false');
-    power := false;
+    Halt(0);
 end;
 
 procedure RecoveryReboot;
 begin
-    SetFlag('true');
-    power := false;
+    Halt(1);
 end;
 
 procedure HelpCommand;
@@ -192,16 +188,16 @@ var
   i: Integer;
 begin
   Write('[');
-  for i := 1 to 10 do Write('.');  // Начальное состояние
+  for i := 1 to 10 do Write('.');
   Write('] 0%');
 
   for i := 1 to TotalSteps do
   begin
-    sleep(500);  // Задержка для анимации
-    GotoXY(1 + (i * 10 div TotalSteps), WhereY);  // Перемещаем курсор
-    Write('#');  // Заменяем точку на решётку
-    GotoXY(15, WhereY);  // Перемещаемся к проценту
-    Write(i * 100 div TotalSteps, '%');  // Обновляем процент
+    sleep(500);
+    GotoXY(1 + (i * 10 div TotalSteps), WhereY);
+    Write('#');
+    GotoXY(15, WhereY);
+    Write(i * 100 div TotalSteps, '%');
   end;
   Writeln;
 end;
@@ -209,12 +205,11 @@ end;
 procedure RecoveryMode; { основная процедура, ядро рекавери мода }
 var command:string;
 begin
-    power := true;
     clrscr;
     writeln('Loading Recovery Mode...');
     AnimatedProgressBar(10);
     
-    while power do
+    while true do
     begin
         write('recoverymode$: ');
         readln(command);

@@ -112,7 +112,7 @@ begin
   writeln('clear - clears screen');
   writeln('poweroff - turns off your PC');
   writeln('reboot - full reboot');
-  writeln('spm - simple program manager, type "ipm help" for more info');
+  writeln('spm - simple program manager, type "spm help" for more info');
   writeln('cfile <filename> - making file in dir "/data/user/"');
   writeln('rmfile <filename> - removes file from dir "/data/user/"');
   writeln('readfile <filename> - writing to screen the content of <filename>');
@@ -214,7 +214,7 @@ end;
 
 function DoesProgramInstalled(name: string): boolean;
 begin
-    DoesProgramInstalled := FileExists('./root/data/programs' + name);
+    DoesProgramInstalled := FileExists('./root/data/programs/' + name);
 end;
 
 procedure caseofcommands(var com: string; var args: string);

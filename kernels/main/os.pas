@@ -93,8 +93,7 @@ begin
   begin
     writeln('Max attempts count reached, turning off...');
     sleep(300);
-    power := false;
-    exit;
+    halt(0);
   end;
   
   end;
@@ -107,13 +106,13 @@ end;
 
 procedure MainCommand; { Процедура самой главной команды }
 begin
-  writeln('Pascal Operating System 3.3');
+  writeln('Pascal Operating System');
   writeln(' ');
   writeln('ls - shows dir content');
   writeln('clear - clears screen');
   writeln('poweroff - turns off your PC');
   writeln('reboot - full reboot');
-  writeln('ipm - installing program manager, type "ipm help" for more info');
+  writeln('spm - simple program manager, type "ipm help" for more info');
   writeln('cfile <filename> - making file in dir "/data/user/"');
   writeln('rmfile <filename> - removes file from dir "/data/user/"');
   writeln('readfile <filename> - writing to screen the content of <filename>');

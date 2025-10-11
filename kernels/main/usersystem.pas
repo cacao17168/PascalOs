@@ -54,6 +54,7 @@ repeat
     end;
     
     createuser(logname + ' ' + passwd);
+    success := true;
 until success;    
 end;
 

@@ -24,20 +24,6 @@ var Apps: array[1..10] of TAppInfo; { специальный массив с п�
     playAgain: char;
     flag, progname: string;
 
-procedure Loading; { прогресс бар для установки приложений }
-var i: integer;
-begin
-  i := 0;
-  
-  write('Completed: [');
-  for i := 1 to 20 do
-  begin
-    write('#');
-    sleep(100);
-  end;
-  writeln('] Done!');
-end;
-
 procedure InitRepo; { инициализация репозитория }
 var i: integer;
 begin
@@ -56,8 +42,8 @@ begin
     Apps[i].installed := fileexists(Apps[i].execpath);
 end;
 
-procedure Install(appname: string); { установка программ }
-var i: integer; f: file of string;
+function Install(appname: string): integer; { установка программ }
+var i: integer; f: file of byte;
 begin
     i := 0;
     
@@ -67,35 +53,33 @@ begin
         begin
             if Apps[i].installed = false then
             begin
-                write('Searching ', Apps[i].name, '...');
-                sleep(150);
-                writeln('Done!');
-                writeln('Installing...');
                 assign(f, Apps[i].execpath);
                 rewrite(f);
                 close(f);
-                Loading;
                 Apps[i].installed := true;
+                Install := 0;
                 break;
             end
             else
             begin
-                writeln('You have already installed this program');
+                install := 1;
                 break;
             end;
-        end;
+        end
+        else
+        Install := 2;
     end;
 end;
 
 procedure IpmHelp(arg: string); { выводит функции программного менеджера ipm }
 begin
-    writeln('Ipm is a simple program manager for OS. Using: ipm [option] [program name]');
+    writeln('Spm is a simple program manager for OS. Using: ipm [option] [program name]');
     writeln('Options:'#10'-i - install program'#10'-r - remove program');
 end;
 
 
-procedure Uninstall(appname: string); { удаление программ }
-var i: integer; f: file of string;
+function Uninstall(appname: string): integer; { удаление программ }
+var i: integer; f: file of byte;
 begin
     i := 0;
     
@@ -105,19 +89,20 @@ begin
         begin
             if Apps[i].installed = true then
             begin
-                writeln(Apps[i].name, ' will be removed from your PC');
                 assign(f, Apps[i].execpath);
                 erase(f);
-                Loading;
                 Apps[i].installed := false;
+                Uninstall := 0;
                 break;
             end
             else
             begin
-                writeln('Program is not installed');
+                Uninstall := 1;
                 break;
             end;
-        end;
+        end
+        else
+        Uninstall := 2;
     end;
 end;
 
@@ -134,41 +119,36 @@ begin
     progname := copy(prog, spacepos + 1, length(prog));
 end;
 
-procedure VideoInstall; { Установка видеодрайвера }
+function VideoInstall: integer; { Установка видеодрайвера }
 var vdriver: text;
 begin
   if FileExists('./root/system/modules/video') then
-      writeln('Driver has already installed')
+      VideoInstall := 1
     else
   begin
-     writeln('Installing video driver...');
      assign(vdriver, './root/system/modules/video');
      rewrite(vdriver);
-     sleep(200);
-     writeln('Configuring driver...');
      sleep(500);
-     writeln('Installed successfully!');
+     VideoInstall := 0;
   end;
 end;
 
-procedure AudioInstall; { Установка аудиодрайвера }
+function AudioInstall: integer; { Установка аудиодрайвера }
 var adriver: text;
 begin
   if FileExists('./root/system/modules/audio') then
-      writeln('Driver has already installed')
+      AudioInstall := 1
     else
   begin
-     writeln('Installing audio driver...');
      assign(adriver, './root/system/modules/audio');
      rewrite(adriver);
-     sleep(200);
-     writeln('Configuring driver...');
      sleep(500);
-     writeln('Installed successfully!');
+     AudioInstall := 0;
   end;
 end;
 
 procedure repoApi(args: string);
+var status: integer;
 begin
     ParseFlag(args);
     
@@ -181,47 +161,58 @@ begin
     if (progname = 'video-driver') or (progname = 'audio-driver') then
     begin
         case progname of
-        'video-driver':VideoInstall;
-        'audio-driver':AudioInstall;
+        'video-driver':status := VideoInstall;
+        'audio-driver':status := AudioInstall;
+        end;
+        
+        case status of
+        0:writeln('Installed Successfully!');
+        1:writeln('Driver has already installed!');
         end;
         
         exit;
     end;
     
     case flag of
-    '-i':Install(progname);
-    '-r':Uninstall(progname);
+    '-i':status := Install(progname);
+    '-r':status := Uninstall(progname);
     else
         writeln('Unknown flag. Enter "ipm help" for more info');
+    end;
+    
+    case status of
+    0:writeln('Program has installed/deleted successfully!');
+    1:writeln('Program has already installed or hasn`t installed yet!');
+    2:writeln('Program was not found!');
     end;
 end;
 
 procedure ShowChoices;
 begin
-  writeln('Выберите:');
-  writeln('1 - Камень');
-  writeln('2 - Ножницы');
-  writeln('3 - Бумага');
+  writeln('Choose:');
+  writeln('1 - Rock');
+  writeln('2 - Scissors');
+  writeln('3 - Paper');
 end;
 
 procedure DetermineWinner(player, computer: integer);
 begin
   { Выводим ход пользователя и компьютера }
-  writeln('Вы выбрали: ', playerChoice);
-  writeln('Компьютер выбрал: ', computerChoice);
+  writeln('Your choice: ', playerChoice);
+  writeln('Computer`s choice: ', computerChoice);
 
   { Если выбор равен, то ничья }
   if player = computer then
-    writeln('Ничья!')
+    writeln('Draw!')
   { Определяем победителя и выводим сообщение в консоль }
   else if ((player = 1) and (computer = 2)) or
           ((player = 2) and (computer = 3)) or
           ((player = 3) and (computer = 1)) then begin
-    writeln('Вы победили!');
+    writeln('You win!');
     writeln(#7);
     end
   else
-    writeln('Компьютер победил!');
+    writeln('Computer wins!');
 end;
 
 { Основной код игры }
@@ -238,13 +229,13 @@ begin
     ShowChoices;
     
     { Получаем ход пользователя }
-    write('Ваш ход (1-3): ');
+    write('Your turn(1-3): ');
     readln(playerChoice);
 
     { Проверяем, чтобы ввод пользователя соответствовал условию }
     if (playerChoice < 1) or (playerChoice > 3) then
     begin
-      writeln('Неверный выбор. Попробуйте снова.');
+      writeln('Invalid choice. Please, try again.');
       sleep(2000);
       continue;  { Возвращаемся в начало цикла }
     end;
@@ -257,14 +248,14 @@ begin
 
     { Спрашиваем, хочет ли пользователь сыграть ещё раз}
     writeln;
-    write('Хотите сыграть ещё раз? (y/n): ');
+    write('Do you want to play again? (y/n): ');
     readln(playAgain);
 
   { Цикл игры повторяется до тех пор, пока пользователь не введёт n или N }    
   until (playAgain = 'n') or (playAgain = 'N');
 
   { Благодарим пользователя и завершаем игру }
-  writeln('Спасибо за игру!');
+  writeln('Thanks for playing!');
 end;
 
 procedure ShowMenu; { выводит меню калькулятора }

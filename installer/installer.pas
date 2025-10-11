@@ -17,36 +17,107 @@ begin
         filecreate('./root/boot/neoinit/loader');
 end;
 
-procedure RootCreate; { Создание корневой папки и папки /boot, где будут находиться ядра и загрузчик }
+procedure RootCreate; { Создание корневой папки, где будут находиться ядра и загрузчик }
+const PATHS: array[1..9] of string = (
+          'root',
+          'root/boot',
+          'root/boot/neoinit',
+          'root/config',
+          'root/data',
+          'root/data/programs',
+          'root/data/user',
+          'root/system',
+          'root/system/modules'
+      );
+var i: integer;
 begin
-    if directoryexists('root')=false then
-        mkdir('root');
-    if directoryexists('./root/boot')=false then
-        mkdir('./root/boot');
-    if directoryexists('./root/boot/neoinit')=false then
-        mkdir('./root/boot/neoinit');
-    if directoryexists('./root/config')=false then
-        mkdir('./root/config');
-    if directoryexists('./root/system')=false then
-        mkdir('./root/system');
-    {if directoryexists('./root/boot/modules')=false then
-        mkdir('./root/boot/modules');}
-    //данная папка в ближайшее время не понадобится
+    for i := low(PATHS) to high(PATHS) do
+    begin
+        if not directoryexists(PATHS[i]) then
+            mkdir(PATHS[i]);
+    end;
+end;
+
+function FileCopy(const filename: string; const dest: string): integer;
+begin
+    executeprocess('/bin/cp', [filename, dest]);
+    
+    Filecopy := 0;
+end;
+
+procedure CopyKernels;
+var k: TSearchRec;
+begin
+    if FindFirst('./kernels/main/*.bin', faReadOnly, k) = 0 then
+    begin
+        repeat
+            executeprocess('/bin/cp', ['./kernels/main/' + k.name, './root/boot']);
+        until findnext(k) <> 0;
+        
+        findclose(k);
+    end;
+    
+    if FindFirst('./kernels/recovery/*.bin', faReadOnly, k) = 0 then
+    begin
+        repeat
+            executeprocess('/bin/cp', ['./kernels/recovery/' + k.name, './root/boot']);
+        until findnext(k) <> 0;
+        
+        findclose(k);
+    end;
+end;
+
+procedure Clean;
+var f: TSearchRec; f1: text;
+begin
+    if FindFirst('*.pas', faReadOnly, f) = 0 then
+    begin
+        repeat
+            assign(f1, f.name);
+            erase(f1);
+        until findnext(f) <> 0;
+        
+        findclose(f);
+    end;
+    
+    if FindFirst('*.o', faReadOnly, f) = 0 then
+    begin
+        repeat
+            assign(f1, f.name);
+            erase(f1);
+        until findnext(f) <> 0;
+        
+        findclose(f);
+    end;
+    
+    if FindFirst('*.ppu', faReadOnly, f) = 0 then
+    begin
+        repeat
+            assign(f1, f.name);
+            erase(f1);
+        until findnext(f) <> 0;
+        
+        findclose(f);
+    end;
 end;
 
 procedure Compile; { Основная процедура где запускается компиляция ядра }
 begin
 
-  if (fileexists('bootloader.pas')) and (fileexists('osboot.pas')) then { Проверка наличия исходников }
+  if (fileexists('./bootloader/bootloader.pas')) and (fileexists('./bootloader/osboot.pas')) then { Проверка наличия исходников }
     begin
         RootCreate; { создается корневая фс }
         writeln('Installing system...');
-        executeprocess('/bin/bash', ['-c', 'make > /dev/null 2>&1']); { это bash вставка, я ее использовал чтобы перенаправить вывод make(который мне не нужен) в файл /dev/null(в makefile вызывается fpc, у которого есть свой вывод по типу "Target OS: linux", и тд и тп) }
-        write('->Compiling kernel...');
+        CopyKernels;
+        Filecopy('./bootloader/osboot.pas', './boot.pas');
+        Filecopy('./bootloader/bootloader.pas', './bootloader.pas');
+        write('->Compiling bootloader...');
+        executeprocess('/bin/bash', ['-c', 'fpc boot.pas -oBootloader.bin > /dev/null 2>&1']); { я использовал данную процедуру для симуляции установки загрузчика }
         ScreenUpdate('->Creating dir /boot...'); sleep(1000);
         ScreenUpdate('->Installing NeoInit bootloader...'); sleep(1500);
             BootLoaderGen;
-        ScreenUpdate('Installed Successful. Execute in terminal "BootLoader.bin" to run your system.'#10);
+        ScreenUpdate('Installed Successful. Execute in terminal "./Bootloader.bin" to run bootloader.'#10);
+        Clean;
     end
   else
   begin
